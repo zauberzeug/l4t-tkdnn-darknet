@@ -1,0 +1,21 @@
+version: "3.3"
+
+services:
+  tkdnn:
+    image: "registry.learning-loop.ai/loop_tkdnn:${TAG-latest}"
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+    build:
+      context: .
+      dockerfile: tkdnn.dockerfile
+      args:
+        MAKEFLAGS: "-j6"
+    command: "tail -f /dev/null"
+    volumes:
+      - ./test_data:/data
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              capabilities: [gpu, utility]
