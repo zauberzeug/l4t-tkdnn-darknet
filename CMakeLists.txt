@@ -115,6 +115,11 @@ target_link_libraries(map_demo tkDNN)
 add_executable(demo demo/demo/demo.cpp)
 target_link_libraries(demo tkDNN)
 
+add_library(darknetRT SHARED demo/demo/darknetRT.cpp)
+target_compile_definitions(darknetRT PRIVATE LIB_EXPORTS=1)
+target_compile_definitions(darknetRT PRIVATE -DDEMO_EXPORTS)
+target_link_libraries(darknetRT tkDNN)
+
 #-------------------------------------------------------------------------------
 # Install
 #-------------------------------------------------------------------------------

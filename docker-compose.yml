@@ -1,7 +1,7 @@
 version: "3.3"
 
 services:
-  tkdnn:
+  tkdnn_2:
     image: "registry.learning-loop.ai/loop_tkdnn:${TAG-latest}"
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
@@ -13,6 +13,9 @@ services:
     command: "tail -f /dev/null"
     volumes:
       - ./test_data:/data
+      - ./tkdnn_python/darknet_rt.py:/tkDNN/darknet_rt.py
+      - ./tkdnn_python/darknetRT.h:/tkDNN/demo/demo/darknetRT.h
+      - ./tkdnn_python/darknetRT.cpp:/tkDNN/demo/demo/darknetRT.cpp
     deploy:
       resources:
         reservations:

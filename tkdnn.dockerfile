@@ -32,6 +32,12 @@ RUN git clone https://github.com/ceccocats/tkDNN.git
 RUN rm -rf tkDNN
 RUN git clone https://github.com/ceccocats/tkDNN.git tkDNN
 COPY CMakeLists.txt /tkDNN/CMakeLists.txt
+
+#Adapt scripts to work with python
+COPY ./tkdnn_python/DetectionNN.h /tkDNN/include/tkDNN/DetectionNN.h
+COPY ./tkdnn_python/utils.h /tkDNN/include/tkDNN/utils.h
+COPY ./tkdnn_python/utils.cpp /tkDNN/src/utils.cpp
+
 # TODO: Add custom yolov4.cpp file
 RUN mkdir /tkDNN/build
 COPY yolo4tiny.cpp /tkDNN/tests/darknet/yolo4tiny.cpp
