@@ -59,10 +59,10 @@ docker build --build-arg MAKEFLAGS=-j6 -t l4t-tkdnn-darknet:latest .
 
 ## Prequesites
 
-This Repo uses the [tkDNN Repository](https://github.com/ceccocats/tkDNN). Although tkDNN and darknet are already compiled, the weights have to be exported.
+This Repo uses the [tkDNN Repository](https://github.com/ceccocats/tkDNN). Although tkDNN and darknet are already compiled, the weights have to be exported manually.
 Therefore, `./darknet export <path-to-cfg-file> <path-to-weights> layers` has to be executed inside `/tkDNN/darknet`.
 
-If data like a custom `.cfg`file or test images should be available on startup, you can place those files inside the `test_data` directory. For the demo to work with custom data, the needed files are a `cfg` called `training.cfg`, a `weightfile` called `some_weightfile` and a `txt` file called `names.txt` including the classnames. If you want to use different filenames for the yolo4tiny demo, you have to adapt the `/tkdnn/tests/yolo4tiny.cpp` file and recompile tkdnn.
+If data like a custom `.cfg`file or test images should be available on startup, you can place those files inside the `test_data` directory. For the demo to work with custom data, the needed files are a `cfg` file called `training.cfg`, a `weightfile` called `some_weightfile` and a `txt` file called `names.txt` including the classnames. If you want to use different filenames for the yolo4tiny demo, you have to adapt the `/tkdnn/tests/yolo4tiny.cpp` file and recompile tkdnn.
 
 After the weights are exported, the `.rt` file has to be created by calling `./test_yolo4tiny`inside the `build` directory. Of course this step can be done with any other net available inside that directory. 
 Precision is set beforehand by `export TKDNN_MODE=FP16` or `FP32`. `INT8` is not supported by Jetson Nano.
