@@ -37,6 +37,8 @@ COPY CMakeLists.txt /tkDNN/CMakeLists.txt
 COPY ./tkdnn_python/DetectionNN.h /tkDNN/include/tkDNN/DetectionNN.h
 COPY ./tkdnn_python/utils.h /tkDNN/include/tkDNN/utils.h
 COPY ./tkdnn_python/utils.cpp /tkDNN/src/utils.cpp
+COPY ./tkdnn_python/darknetRT.cpp /tkDNN/demo/demo/darknetRT.cpp
+COPY ./tkdnn_python/darknetRT.h /tkDNN/demo/demo/darknetRT.h
 
 # TODO: Add custom yolov4.cpp file
 RUN mkdir /tkDNN/build

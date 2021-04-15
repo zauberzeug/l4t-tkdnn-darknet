@@ -48,7 +48,7 @@ get_network_boxes.restype = POINTER(DETECTION)
 
 
 
-def detect_image(net, darknet_image, thresh=.5):
+def detect_image(net, darknet_image, thresh=.2):
     num = c_int(0)
 
     pnum = pointer(num)
@@ -62,27 +62,30 @@ def detect_image(net, darknet_image, thresh=.5):
     return res
 
 
-def loop_detect(detect_m, file_path):
+def loop_detect(detect_m, file_path, width, height):
     start = time.time()
     cnt = 0
     if not file_path.endswith('.mp4'):
+        image = cv2.imread(file_path)
+        img_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
         for _ in range(10):
-            image = cv2.imread(file_path)
-            detections = detect_m.detect(image, need_resize=False)
+            detections = detect_m.detect(img_rgb)
             cnt += 1
             for det in detections:
                     print(det)
+            print()
     else:
         stream = cv2.VideoCapture(file_path)
         while stream.isOpened():
             ret, image = stream.read()
             if ret is False:
                 break
-            # frame_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
             image = cv2.resize(image,
-                            (800, 800),
-                            interpolation=cv2.INTER_LINEAR)
-            detections = detect_m.detect(image, need_resize=False)
+                           (width, height),
+                           interpolation=cv2.INTER_LINEAR)
+            
+            detections = detect_m.detect(image)
             cnt += 1
             for det in detections:
                 print(det)
@@ -98,7 +101,6 @@ class YOLO4RT(object):
                  image_width,
                  image_height,
                  weight_file,
-                 nms=1.0, # We do not want to filter boxes, not applied yet
                  conf_thres=0.2,
                  device='cuda'):
         self.image_width = image_width
@@ -107,7 +109,7 @@ class YOLO4RT(object):
         self.darknet_image = make_image(image_width, image_height, 3)
         self.thresh = conf_thres
 
-    def detect(self, image, need_resize=True):
+    def detect(self, image):
         try:
             frame_data = image.ctypes.data_as(c_char_p)
             copy_image_from_bytes(self.darknet_image, frame_data)
@@ -121,6 +123,8 @@ class YOLO4RT(object):
 def parse_args():
     parser = argparse.ArgumentParser(description='tkDNN detect')
     parser.add_argument('weight', help='rt weightfile path')
+    parser.add_argument('width', nargs='?', help='width of frame', default=1600)
+    parser.add_argument('height', nargs='?', help='height of frame', default=1200)
     parser.add_argument('--file',  type=str, help='file path')
     args = parser.parse_args()
 
@@ -130,8 +134,10 @@ def parse_args():
 
 if __name__ == '__main__':
     args = parse_args()
-    detect_m = YOLO4RT(image_width=1600, image_height=1200, weight_file=args.weight)
-    t = Thread(target=loop_detect, args=(detect_m, args.file), daemon=True)
+    
+    detect_m = YOLO4RT(image_width=int(args.width), image_height=int(args.height), weight_file=args.weight)
+
+    t = Thread(target=loop_detect, args=(detect_m, args.file, int(args.width), int(args.height)), daemon=True)
 
     t.start()
     t.join()
