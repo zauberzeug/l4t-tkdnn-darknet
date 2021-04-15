@@ -83,28 +83,4 @@ detection* get_network_boxes(tk::dnn::Yolo3Detection *net, float thresh, int *pn
     return dets;
 }
 
-detection* get_network_boxes_batched(tk::dnn::Yolo3Detection *net, float thresh, int batch_num, int *pnum)
-{
-    std::vector<std::vector<tk::dnn::box>> batchDetected;
-    batchDetected = net->get_batch_detected();
-    int nboxes =0;
-    std::vector<std::string> classesName = net->get_classesName();
-    detection* dets = (detection*)xcalloc(batchDetected[batch_num].size(), sizeof(detection));
-    for (int i = 0; i < batchDetected[batch_num].size(); ++i)
-    {
-        if (batchDetected[batch_num][i].prob > thresh)
-        {
-            dets[nboxes].cl = batchDetected[batch_num][i].cl;
-            strcpy(dets[nboxes].name,classesName[dets[nboxes].cl].c_str());
-            dets[nboxes].bbox.x = batchDetected[batch_num][i].x;
-            dets[nboxes].bbox.y = batchDetected[batch_num][i].y;
-            dets[nboxes].bbox.w = batchDetected[batch_num][i].w;
-            dets[nboxes].bbox.h = batchDetected[batch_num][i].h;
-            dets[nboxes].prob = batchDetected[batch_num][i].prob;
-            nboxes += 1;
-        }
-    }
-    if (pnum) *pnum = nboxes;
-    return dets;
-}
 }
