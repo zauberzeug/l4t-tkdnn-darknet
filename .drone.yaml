@@ -1,0 +1,51 @@
+kind: pipeline
+type: docker
+name: default
+
+platform:
+  os: linux
+  arch: arm64
+
+steps:
+  - name: build  
+    image: docker
+    volumes:
+      - name: docker_sock
+        path: /var/run/docker.sock
+    commands:
+      - "docker build --build-arg MAKEFLAGS=-j6 -t zauberzeug/l4t-tkdnn-darknet:nano-r32.4.4 ."
+
+  - name: publish  
+    image: docker
+    environment:
+      PASSWORD:
+        from_secret: zauberzeug_docker_password
+    volumes:
+      - name: docker_sock
+        path: /var/run/docker.sock
+    commands:
+      - "docker -D login -u zauberzeug -p $PASSWORD"
+      - "docker push zauberzeug/l4t-tkdnn-darknet:nano-r32.4.4"
+
+  - name: readme
+    image: chko/docker-pushrm:1
+    environment:
+      DOCKER_USER: zauberzeug
+      DOCKER_PASS:
+          from_secret: zauberzeug_docker_password
+      PUSHRM_TARGET: zauberzeug/l4t-tkdnn-darknet
+      PUSHRM_SHORT: tkDNN and darknet for Jetson Nano (Linux for Tegra, l4t) with Docker.
+
+  - name: slack
+    image: plugins/slack:1.3.0
+    settings:
+      webhook:
+          from_secret: deeplearning_slack_webhook
+    when:
+      status:
+      - failure
+
+volumes:
+- name: docker_sock
+  host:
+    path: /var/run/docker.sock
