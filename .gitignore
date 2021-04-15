@@ -1,2 +1,4 @@
 eigen3
-test_data
+test_data/*
+
+!.gitkeep
