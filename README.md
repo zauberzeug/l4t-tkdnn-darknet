@@ -1,8 +1,8 @@
 # l4t-tkdnn
 
-tkDNN for Jetson Nano (Linux for Tegra, l4t) with Docker. At this stage, the Container is tested with a YOLOv4-Tiny net with three output layers.
+tkDNN and darknet for Jetson Nano (Linux for Tegra, l4t) with Docker. At this stage, the Container is tested with a YOLOv4-Tiny net with three output layers.
 
-Code: https://github.com/zauberzeug/l4t-tkdnn
+Code: https://github.com/zauberzeug/l4t-tkdnn-darknet
 
 Image: tbd.
 
@@ -10,7 +10,17 @@ Image: tbd.
 
 ## Dockerfile
 
+Most of the time you will use this image as base for your own Dockerfile:
+
+```
+FROM zauberzeug/l4t-tkdnn-darknet:nano-r32.4.4
+
+...
+```
+
 ## Docker Run
+
+`docker run --rm -it --runtime=nvidia -e NVIDIA_VISIBLE_DEVICES=all zauberzeug/l4t-tkdnn-darknet:nano-r32.4.4 bash`
 
 ## Docker Compose
 
@@ -19,7 +29,7 @@ version: "3.3"
 
 services:
   tkdnn:
-    image: "registry.learning-loop.ai/loop_tkdnn:${TAG-latest}"
+    image: "zauberzeug/l4t-tkdnn-darknet:nano-r32.4.4"
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
     build:
@@ -27,7 +37,7 @@ services:
       dockerfile: tkdnn.dockerfile
       args:
         MAKEFLAGS: "-j6"
-    command: "tail -f /dev/null"
+    command: "/bin/bash"
     volumes:
       - ./test_data:/data
       - ./tkdnn_python/darknet_rt.py:/tkDNN/darknet_rt.py
@@ -41,6 +51,9 @@ services:
 
 # Build
 
+We use drone to automatically build this image. If you want to do it by hand, execute
+
+docker build --build-arg MAKEFLAGS=-j6 -t l4t-tkdnn-darknet:latest .
 
 # Demo
 
