@@ -1,4 +1,4 @@
-eigen3
 test_data/*
+secrets.txt
 
 !.gitkeep
