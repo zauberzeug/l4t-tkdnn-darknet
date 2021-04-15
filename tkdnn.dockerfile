@@ -1,7 +1,5 @@
 FROM zauberzeug/l4t-opencv:4.5.0-on-nano-r32.4.4
 
-COPY eigen3 /usr/include/eigen3 
-
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y git wget 
 
 ARG MAKEFLAGS
