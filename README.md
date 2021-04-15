@@ -33,8 +33,6 @@ services:
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
     build:
-      context: .
-      dockerfile: tkdnn.dockerfile
       args:
         MAKEFLAGS: "-j6"
     command: "/bin/bash"
