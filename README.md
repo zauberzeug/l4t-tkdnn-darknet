@@ -71,7 +71,7 @@ Precision is set beforehand by `export TKDNN_MODE=FP16` or `FP32`. `INT8` is not
 
 The demo can be run like explained in the tkDNN Repo: https://github.com/ceccocats/tkDNN#run-the-demo
 
-This demo additionally alredy includes a Python Wrapper like suggested here: https://github.com/ceccocats/tkDNN/pull/44
+This demo additionally includes a Python Wrapper like suggested here: https://github.com/ceccocats/tkDNN/pull/44
 
 This wrapper is based on this pull request and can be run by calling `python3 darknet_rt.py ./darknet_fp16.rt --file=example.jpg`
 
