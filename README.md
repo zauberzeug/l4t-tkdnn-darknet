@@ -83,7 +83,7 @@ where:
 * `<network-rt-file>` : The generated .rt file
 * `<width>`: width of the provided file. If not provided, it defaults to 1600.
 * `<height>`: height of the provided file. If not provided, it defaults to 1200.
-* `<path-to-file>`: Path to the used image or video file. Has to be provided with `--file=*`
+* `<path-to-file>`: Path to the used image or video file. Has to be provided by using `--file=*`
 
 
 
