@@ -51,7 +51,7 @@ services:
 
 We use drone to automatically build this image. If you want to do it by hand, execute
 
-docker build --build-arg MAKEFLAGS=-j6 -t l4t-tkdnn-darknet:latest .
+`docker build --build-arg MAKEFLAGS=-j6 -t l4t-tkdnn-darknet:latest .`
 
 # Demo
 

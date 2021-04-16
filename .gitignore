@@ -1,5 +1,6 @@
 test_data/*
 secrets.txt
 inferences
+eigen3
 
 !.gitkeep

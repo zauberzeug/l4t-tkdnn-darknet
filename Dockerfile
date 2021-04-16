@@ -38,7 +38,9 @@ COPY ./tkdnn_python/utils.cpp /tkDNN/src/utils.cpp
 COPY ./tkdnn_python/darknetRT.cpp /tkDNN/demo/demo/darknetRT.cpp
 COPY ./tkdnn_python/darknetRT.h /tkDNN/demo/demo/darknetRT.h
 
-# TODO: Add custom yolov4.cpp file
+#eigen3 needs to be placed in build directory
+COPY eigen3 /usr/include/eigen3
+
 RUN mkdir /tkDNN/build
 COPY yolo4tiny.cpp /tkDNN/tests/darknet/yolo4tiny.cpp
 RUN cd tkDNN && cd build && cmake .. && make $MAKEFLAGS
