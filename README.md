@@ -37,7 +37,7 @@ services:
         MAKEFLAGS: "-j6"
     command: "/bin/bash"
     volumes:
-      - ./test_data:/data
+      - ./test_data:/model
       - ./tkdnn_python/darknet_rt.py:/tkDNN/darknet_rt.py
     deploy:
       resources:

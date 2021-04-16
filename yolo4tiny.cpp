@@ -15,8 +15,8 @@ int main() {
         bin_path + "/debug/layer44_out.bin"
     };
     std::string wgs_path  = bin_path + "/layers";
-    std::string cfg_path  =  "/data/training.cfg";
-    std::string name_path = "/data/names.txt";
+    std::string cfg_path  =  "/model/training.cfg";
+    std::string name_path = "/model/names.txt";
 
     // parse darknet network
     tk::dnn::Network *net = tk::dnn::darknetParser(cfg_path, wgs_path, name_path);
