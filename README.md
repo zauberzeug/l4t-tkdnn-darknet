@@ -4,7 +4,7 @@ tkDNN and darknet for Jetson Nano (Linux for Tegra, l4t) with Docker. At this st
 
 Code: https://github.com/zauberzeug/l4t-tkdnn-darknet
 
-Image: tbd.
+Image: https://hub.docker.com/repository/docker/zauberzeug/l4t-tkdnn-darknet
 
 # Usage
 
