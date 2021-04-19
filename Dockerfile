@@ -1,6 +1,6 @@
 FROM zauberzeug/l4t-opencv:4.5.0-on-nano-r32.4.4
 
-RUN DEBIAN_FRONTEND=noninteractive apt-get install -y git wget 
+RUN DEBIAN_FRONTEND=noninteractive apt update && apt-get install -y git wget libeigen3-dev
 
 ARG MAKEFLAGS
 
@@ -38,8 +38,6 @@ COPY ./tkdnn_python/utils.cpp /tkDNN/src/utils.cpp
 COPY ./tkdnn_python/darknetRT.cpp /tkDNN/demo/demo/darknetRT.cpp
 COPY ./tkdnn_python/darknetRT.h /tkDNN/demo/demo/darknetRT.h
 
-#eigen3 needs to be placed in build directory
-COPY eigen3 /usr/include/eigen3
 
 RUN mkdir /tkDNN/build
 COPY yolo4tiny.cpp /tkDNN/tests/darknet/yolo4tiny.cpp
