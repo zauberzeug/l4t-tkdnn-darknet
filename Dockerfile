@@ -1,4 +1,4 @@
-FROM zauberzeug/l4t-opencv:4.5.2-on-nano-r32.5.0
+FROM zauberzeug/l4t-opencv:4.5.2-on-nano-r32.5.0 as builder
 
 RUN DEBIAN_FRONTEND=noninteractive apt update && apt-get install -y git wget libeigen3-dev
 
@@ -26,21 +26,24 @@ WORKDIR /
 RUN ls
 RUN git clone https://github.com/ceccocats/tkDNN.git
 
-# Changes in CMakeLists.txt neccesary 
+# changes in CMakeLists.txt neccesary 
 RUN rm -rf tkDNN
 RUN git clone https://github.com/ceccocats/tkDNN.git tkDNN
 COPY CMakeLists.txt /tkDNN/CMakeLists.txt
 
-#Adapt scripts to work with python
+# adapt scripts to work with python
 COPY ./tkdnn_python/DetectionNN.h /tkDNN/include/tkDNN/DetectionNN.h
 COPY ./tkdnn_python/utils.h /tkDNN/include/tkDNN/utils.h
 COPY ./tkdnn_python/utils.cpp /tkDNN/src/utils.cpp
 COPY ./tkdnn_python/darknetRT.cpp /tkDNN/demo/demo/darknetRT.cpp
 COPY ./tkdnn_python/darknetRT.h /tkDNN/demo/demo/darknetRT.h
 
-
 RUN mkdir /tkDNN/build
 COPY yolo4tiny.cpp /tkDNN/tests/darknet/yolo4tiny.cpp
-RUN cd tkDNN && cd build && cmake .. && make $MAKEFLAGS
+RUN cd tkDNN && cd build && cmake .. -D CMAKE_INSTALL_PREFIX=/usr/local/tkDNN && make $MAKEFLAGS && make install
 
-RUN cd /tkDNN && git clone https://git.hipert.unimore.it/fgatti/darknet.git && cd darknet && make && mkdir layers debug
+FROM zauberzeug/l4t-opencv:4.5.2-on-nano-r32.5.0
+
+COPY --from=builder /usr/local/tkDNN /usr/local
+
+CMD bash
