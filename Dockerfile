@@ -1,4 +1,4 @@
-FROM zauberzeug/l4t-opencv:4.5.0-on-nano-r32.4.4
+FROM zauberzeug/l4t-opencv:4.5.2-on-nano-r32.5.0
 
 RUN DEBIAN_FRONTEND=noninteractive apt update && apt-get install -y git wget libeigen3-dev
 
