@@ -17,8 +17,9 @@ RUN git clone --branch yaml-cpp-0.6.0 https://github.com/jbeder/yaml-cpp yaml-cp
     cd yaml-cpp-0.6 && \
     mkdir build && \
     cd build && \
-    cmake -DBUILD_SHARED_LIBS=ON .. && \
+    cmake -DBUILD_SHARED_LIBS=ON -D CMAKE_INSTALL_PREFIX=/usr/local/libyaml-cpp .. && \
     make $MAKEFLAGS && \
+    make install && \
     cp libyaml-cpp.so.0.6.0 /usr/lib/aarch64-linux-gnu/ && \
     ln -s /usr/lib/aarch64-linux-gnu/libyaml-cpp.so.0.6.0 /usr/lib/aarch64-linux-gnu/libyaml-cpp.so.0.6
 
@@ -45,5 +46,7 @@ RUN cd tkDNN && cd build && cmake .. -D CMAKE_INSTALL_PREFIX=/usr/local/tkDNN &&
 FROM zauberzeug/l4t-opencv:4.5.2-on-nano-r32.5.0
 
 COPY --from=builder /usr/local/tkDNN /usr/local
+COPY --from=builder /tkDNN/build/libdarknetRT.so /usr/local/lib/libdarknetRT.so
+COPY --from=builder /usr/local/libyaml-cpp /usr/local
 
 CMD bash
