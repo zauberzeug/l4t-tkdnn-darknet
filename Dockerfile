@@ -48,5 +48,6 @@ FROM zauberzeug/l4t-opencv:4.5.2-on-nano-r32.5.0
 COPY --from=builder /usr/local/tkDNN /usr/local
 COPY --from=builder /tkDNN/build/libdarknetRT.so /usr/local/lib/libdarknetRT.so
 COPY --from=builder /usr/local/libyaml-cpp /usr/local
+COPY --from=builder /tkDNN/build/test_yolo4tiny /usr/local/bin
 
 CMD bash
