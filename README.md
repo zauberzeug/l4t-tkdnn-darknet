@@ -13,14 +13,14 @@ Image: https://hub.docker.com/repository/docker/zauberzeug/l4t-tkdnn-darknet
 Most of the time you will use this image as base for your own Dockerfile:
 
 ```
-FROM zauberzeug/l4t-tkdnn-darknet:nano-r32.5.0
+FROM zauberzeug/l4t-tkdnn-darknet:nano-32.6.1
 
 ...
 ```
 
 ## Docker Run
 
-`docker run --rm -it --runtime=nvidia -e NVIDIA_VISIBLE_DEVICES=all zauberzeug/l4t-tkdnn-darknet:nano-r32.5.0`
+`docker run --rm -it --runtime=nvidia -e NVIDIA_VISIBLE_DEVICES=all zauberzeug/l4t-tkdnn-darknet:nano-32.6.1`
 
 ## Docker Compose
 
@@ -29,7 +29,7 @@ version: "3.3"
 
 services:
   tkdnn:
-    image: "zauberzeug/l4t-tkdnn-darknet:nano-r32.5.0"
+    image: "zauberzeug/l4t-tkdnn-darknet:nano-32.6.1"
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
     build:

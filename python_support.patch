@@ -1,0 +1,481 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 7cc9e33..08616a4 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -133,6 +133,14 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include ${CUDA_INCLUDE_DIRS} ${O
+ add_library(tkDNN SHARED ${tkdnn_SRC})
+ target_link_libraries(tkDNN ${tkdnn_LIBS} ${CUDA_CUBLAS_LIBRARIES})
+ 
++option(BUILD_SHARED_LIBS "Specifies the type of libraries (SHARED or STATIC) to build" ON)
++if (BUILD_SHARED_LIBS)
++    add_library(darknetTR SHARED demo/demo/darknetTR.cpp)
++    target_compile_definitions(darknetTR PRIVATE LIB_EXPORTS=1)
++    target_compile_definitions(darknetTR PRIVATE -DDEMO_EXPORTS)
++    target_link_libraries(darknetTR tkDNN)
++endif()
++
+ #static 
+ #add_library(tkDNN_static STATIC ${tkdnn_SRC})
+ #target_link_libraries(tkDNN_static ${tkdnn_LIBS})
+diff --git a/darknetTR.py b/darknetTR.py
+index e69de29..1e53148 100644
+--- a/darknetTR.py
++++ b/darknetTR.py
+@@ -0,0 +1,207 @@
++#!/usr/bin/env python
++# -*- encoding: utf-8 -*-
++"""
++@File    :   darknetTR.py.py
++@Contact :   JZ
++
++@Modify Time      @Author    @Version    @Desciption
++------------      -------    --------    -----------
++2020/6/12 14:40   JZ      1.0         None
++"""
++
++from ctypes import *
++import cv2
++import numpy as np
++import argparse
++import os
++from threading import Thread
++import time
++
++class IMAGE(Structure):
++    _fields_ = [("w", c_int),
++                ("h", c_int),
++                ("c", c_int),
++                ("data", POINTER(c_float))]
++
++class BOX(Structure):
++    _fields_ = [("x", c_float),
++                ("y", c_float),
++                ("w", c_float),
++                ("h", c_float)]
++
++class DETECTION(Structure):
++    _fields_ = [("cl", c_int),
++                ("bbox", BOX),
++                ("prob", c_float),
++                ("name", c_char*20),
++                ]
++
++lib = CDLL("./build/libdarknetTR.so", RTLD_GLOBAL)
++
++load_network = lib.load_network
++load_network.argtypes = [c_char_p, c_int, c_int]
++load_network.restype = c_void_p
++
++copy_image_from_bytes = lib.copy_image_from_bytes
++copy_image_from_bytes.argtypes = [IMAGE,c_char_p]
++
++make_image = lib.make_image
++make_image.argtypes = [c_int, c_int, c_int]
++make_image.restype = IMAGE
++
++do_inference = lib.do_inference
++do_inference.argtypes = [c_void_p, IMAGE]
++
++get_network_boxes = lib.get_network_boxes
++get_network_boxes.argtypes = [c_void_p, c_float, c_int, POINTER(c_int)]
++get_network_boxes.restype = POINTER(DETECTION)
++
++# cfg = 'yolo4_fp16.rt'
++# netMain = load_network(cfg.encode("ascii"), 80, 1)  # batch size = 1
++#
++#
++# darknet_image = make_image(512, 512, 3)
++# image = cv2.imread('/home/juzheng/dataset/mask/image/20190821004325_55.jpg')
++# frame_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
++# image = cv2.resize(frame_rgb,
++#                    (512, 512),
++#                    interpolation=cv2.INTER_LINEAR)
++#
++# # frame_data = np.asarray(image, dtype=np.uint8)
++# # print(frame_data.shape)
++# frame_data = image.ctypes.data_as(c_char_p)
++# copy_image_from_bytes(darknet_image, frame_data)
++#
++# num = c_int(0)
++#
++# pnum = pointer(num)
++# do_inference(netMain, darknet_image)
++# dets = get_network_boxes(netMain, 0.5, 0, pnum)
++# print('end')
++# print(dets[0].cl, dets[0].prob)
++
++
++def resizePadding(image, height, width):
++    desized_size = height, width
++    old_size = image.shape[:2]
++    max_size_idx = old_size.index(max(old_size))
++    ratio = float(desized_size[max_size_idx]) / max(old_size)
++    new_size = tuple([int(x * ratio) for x in old_size])
++
++    if new_size > desized_size:
++        min_size_idx = old_size.index(min(old_size))
++        ratio = float(desized_size[min_size_idx]) / min(old_size)
++        new_size = tuple([int(x * ratio) for x in old_size])
++
++    image = cv2.resize(image, (new_size[1], new_size[0]))
++    delta_w = desized_size[1] - new_size[1]
++    delta_h = desized_size[0] - new_size[0]
++    top, bottom = delta_h // 2, delta_h - (delta_h // 2)
++    left, right = delta_w // 2, delta_w - (delta_w // 2)
++
++    image = cv2.copyMakeBorder(image, top, bottom, left, right, cv2.BORDER_CONSTANT)
++    return image
++
++def detect_image(net, meta, darknet_image, thresh=.5):
++    num = c_int(0)
++
++    pnum = pointer(num)
++    do_inference(net, darknet_image)
++    dets = get_network_boxes(net, 0.5, 0, pnum)
++    res = []
++    for i in range(pnum[0]):
++        b = dets[i].bbox
++        res.append((dets[i].name.decode("ascii"), dets[i].prob, (b.x, b.y, b.w, b.h)))
++
++    return res
++
++
++def loop_detect(detect_m, video_path):
++    stream = cv2.VideoCapture(video_path)
++    start = time.time()
++    cnt = 0
++    while stream.isOpened():
++        ret, image = stream.read()
++        if ret is False:
++            break
++        # image = resizePadding(image, 512, 512)
++        # frame_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
++        image = cv2.resize(image,
++                           (512, 512),
++                           interpolation=cv2.INTER_LINEAR)
++        detections = detect_m.detect(image, need_resize=False)
++        cnt += 1
++        for det in detections:
++            print(det)
++    end = time.time()
++    print("frame:{},time:{:.3f},FPS:{:.2f}".format(cnt, end-start, cnt/(end-start)))
++    stream.release()
++
++
++# class myThread(threading.Thread):
++#    def __init__(self, func, args):
++#       threading.Thread.__init__(self)
++#       self.func = func
++#       self.args = args
++#    def run(self):
++#       # print ("Starting " + self.args[0])
++#       self.func(*self.args)
++#       print ("Exiting " )
++
++
++class YOLO4RT(object):
++    def __init__(self,
++                 input_size=512,
++                 weight_file='./yolo4_fp16.rt',
++                 metaPath='Models/yolo4/coco.data',
++                 nms=0.2,
++                 conf_thres=0.3,
++                 device='cuda'):
++        self.input_size = input_size
++        self.metaMain =None
++        self.model = load_network(weight_file.encode("ascii"), 80, 1)
++        self.darknet_image = make_image(input_size, input_size, 3)
++        self.thresh = conf_thres
++        # self.resize_fn = ResizePadding(input_size, input_size)
++        # self.transf_fn = transforms.ToTensor()
++
++    def detect(self, image, need_resize=True, expand_bb=5):
++        try:
++            if need_resize:
++                frame_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
++                image = cv2.resize(frame_rgb,
++                                   (self.input_size, self.input_size),
++                                   interpolation=cv2.INTER_LINEAR)
++            frame_data = image.ctypes.data_as(c_char_p)
++            copy_image_from_bytes(self.darknet_image, frame_data)
++
++            detections = detect_image(self.model, self.metaMain, self.darknet_image, thresh=self.thresh)
++
++            # cvDrawBoxes(detections, image)
++            # cv2.imshow("1", image)
++            # cv2.waitKey(1)
++            # detections = self.filter_results(detections, "person")
++            return detections
++        except Exception as e_s:
++            print(e_s)
++
++def parse_args():
++    parser = argparse.ArgumentParser(description='tkDNN detect')
++    parser.add_argument('weight', help='rt file path')
++    parser.add_argument('--video',  type=str, help='video path')
++    args = parser.parse_args()
++
++    return args
++
++
++
++if __name__ == '__main__':
++    args = parse_args()
++    detect_m = YOLO4RT(weight_file=args.weight)
++    t = Thread(target=loop_detect, args=(detect_m, args.video), daemon=True)
++
++    # thread1 = myThread(loop_detect, [detect_m])
++
++    # Start new Threads
++    t.start()
++    t.join()
+\ No newline at end of file
+diff --git a/demo/demo/darknetTR.cpp b/demo/demo/darknetTR.cpp
+index e69de29..ecddb15 100644
+--- a/demo/demo/darknetTR.cpp
++++ b/demo/demo/darknetTR.cpp
+@@ -0,0 +1,98 @@
++#include "darknetTR.h"
++
++bool gRun;
++bool SAVE_RESULT = false;
++
++void sig_handler(int signo) {
++    std::cout<<"request gateway stop\n";
++    gRun = false;
++}
++
++extern "C"
++{
++
++
++void copy_image_from_bytes(image im, unsigned char *pdata)
++{
++//    unsigned char *data = (unsigned char*)pdata;
++//    int i, k, j;
++    int w = im.w;
++    int h = im.h;
++    int c = im.c;
++//    for (k = 0; k < c; ++k) {
++//        for (j = 0; j < h; ++j) {
++//            for (i = 0; i < w; ++i) {
++//                int dst_index = i + w * j + w * h*k;
++//                int src_index = k + c * i + c * w*j;
++//                im.data[dst_index] = (float)data[src_index] / 255.;
++//            }
++//        }
++//    }
++    memcpy(im.data, pdata, h * w * c);
++
++}
++
++image make_empty_image(int w, int h, int c)
++{
++    image out;
++    out.data = 0;
++    out.h = h;
++    out.w = w;
++    out.c = c;
++    return out;
++}
++
++image make_image(int w, int h, int c)
++{
++    image out = make_empty_image(w,h,c);
++    out.data = (float*)xcalloc(h * w * c, sizeof(float));
++    return out;
++}
++
++tk::dnn::Yolo3Detection* load_network(char* net, char* cfg_path, char* name_path, int n_classes, int n_batch, int conf_thresh)
++{
++    std::string net_str = net;
++    std::string cfg_path_str = cfg_path;
++    std::string name_path_str = name_path;
++    tk::dnn::Yolo3Detection *detNN = new tk::dnn::Yolo3Detection;
++    detNN->init(net_str, cfg_path_str, name_path_str, n_classes, n_batch, conf_thresh);
++
++    return detNN;
++}
++#include <typeinfo>
++void do_inference(tk::dnn::Yolo3Detection *net, image im)
++{
++    std::vector<cv::Mat> batch_dnn_input;
++
++    cv::Mat frame(im.h, im.w, CV_8UC3, (unsigned char*)im.data);
++    batch_dnn_input.push_back(frame);
++    net->update(batch_dnn_input, 1);
++
++}
++
++
++detection* get_network_boxes(tk::dnn::Yolo3Detection *net, float thresh, int batch_num, int *pnum)
++{
++    std::vector<std::vector<tk::dnn::box>> batchDetected;
++    batchDetected = net->get_batch_detected();
++    int nboxes =0;
++    std::vector<std::string> classesName = net->get_classesName();
++    detection* dets = (detection*)xcalloc(batchDetected[batch_num].size(), sizeof(detection));
++    for (int i = 0; i < batchDetected[batch_num].size(); ++i)
++    {
++        if (batchDetected[batch_num][i].prob > thresh)
++        {
++            dets[nboxes].cl = batchDetected[batch_num][i].cl;
++            strcpy(dets[nboxes].name,classesName[dets[nboxes].cl].c_str());
++            dets[nboxes].bbox.x = batchDetected[batch_num][i].x;
++            dets[nboxes].bbox.y = batchDetected[batch_num][i].y;
++            dets[nboxes].bbox.w = batchDetected[batch_num][i].w;
++            dets[nboxes].bbox.h = batchDetected[batch_num][i].h;
++            dets[nboxes].prob = batchDetected[batch_num][i].prob;
++            nboxes += 1;
++        }
++    }
++    if (pnum) *pnum = nboxes;
++    return dets;
++}
++}
+diff --git a/demo/demo/darknetTR.h b/demo/demo/darknetTR.h
+index e69de29..0c5947b 100644
+--- a/demo/demo/darknetTR.h
++++ b/demo/demo/darknetTR.h
+@@ -0,0 +1,37 @@
++#ifndef DEMO_H
++#define DEMO_H
++
++#include <iostream>
++#include <signal.h>
++#include <stdlib.h>     /* srand, rand */
++#include <unistd.h>
++#include <mutex>
++#include <malloc.h>
++#include "CenternetDetection.h"
++#include "MobilenetDetection.h"
++#include "Yolo3Detection.h"
++#include "utils.h"
++extern "C"
++{
++typedef struct {
++    int w;
++    int h;
++    int c;
++    float *data;
++} image;
++
++typedef struct {
++    float x, y, w, h;
++}BOX;
++
++typedef struct {
++    int cl;
++    BOX bbox;
++    float prob;
++    char name[20];
++
++}detection;
++
++tk::dnn::Yolo3Detection* load_network(char* net, char* cfg_path, char* name_path, int n_classes, int n_batch, int conf_thresh);
++}
++#endif /* DETECTIONNN_H*/
+\ No newline at end of file
+diff --git a/include/tkDNN/DetectionNN.h b/include/tkDNN/DetectionNN.h
+index 3a757ef..a033eb3 100644
+--- a/include/tkDNN/DetectionNN.h
++++ b/include/tkDNN/DetectionNN.h
+@@ -143,6 +143,19 @@ class DetectionNN {
+             }
+         }      
+ 
++        /**
++         * Method to get results.
++         *
++         */
++        std::vector<std::vector<tk::dnn::box>>& get_batch_detected()
++        {
++            return batchDetected;
++        }
++        std::vector<std::string> get_classesName()
++        {
++            return classesNames;
++        }
++
+         /**
+          * Method to draw bounding boxes and labels on a frame.
+          * 
+diff --git a/include/tkDNN/utils.h b/include/tkDNN/utils.h
+index a1a1f1c..3738911 100644
+--- a/include/tkDNN/utils.h
++++ b/include/tkDNN/utils.h
+@@ -8,7 +8,7 @@
+ #include <stdlib.h>
+ #include <yaml-cpp/yaml.h>
+ 
+-
++#include <malloc.h>
+ #include "cuda.h"
+ #include "cuda_runtime_api.h"
+ #include <cublas_v2.h>
+@@ -140,6 +140,12 @@ typedef enum {
+   ERROR_CUDNNvsTENSORRT = 8    
+ } resultError_t;
+ 
++void *xmalloc(size_t size);
++void *xcalloc(size_t nmemb, size_t size);
++void malloc_error();
++void calloc_error();
++void realloc_error();
++
+ void printCenteredTitle(const char *title, char fill, int dim = 30);
+ bool fileExist(const char *fname);
+ void downloadWeightsifDoNotExist(const std::string& input_bin, const std::string& test_folder, const std::string& weights_url);
+diff --git a/src/utils.cpp b/src/utils.cpp
+index 510b778..78bf117 100644
+--- a/src/utils.cpp
++++ b/src/utils.cpp
+@@ -1,6 +1,48 @@
+ #include "utils.h"
+ #include <string.h>
+ 
++void *xmalloc(size_t size) {
++    void *ptr=malloc(size);
++    if(!ptr) {
++        malloc_error();
++    }
++    return ptr;
++}
++
++void *xcalloc(size_t nmemb, size_t size) {
++    void *ptr=calloc(nmemb,size);
++    if(!ptr) {
++        calloc_error();
++    }
++    return ptr;
++}
++
++void *xrealloc(void *ptr, size_t size) {
++    ptr=realloc(ptr,size);
++    if(!ptr) {
++        realloc_error();
++    }
++    return ptr;
++}
++
++void malloc_error()
++{
++    fprintf(stderr, "xMalloc error\n");
++    exit(EXIT_FAILURE);
++}
++
++void calloc_error()
++{
++    fprintf(stderr, "Calloc error\n");
++    exit(EXIT_FAILURE);
++}
++
++void realloc_error()
++{
++    fprintf(stderr, "Realloc error\n");
++    exit(EXIT_FAILURE);
++}
++
+ void printCenteredTitle(const char *title, char fill, int dim) {
+ 
+     int len = strlen(title);

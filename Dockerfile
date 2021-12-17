@@ -1,4 +1,4 @@
-FROM zauberzeug/l4t-opencv:4.5.2-on-nano-r32.5.0 as builder
+FROM zauberzeug/l4t-opencv:4.5.2-on-nano-32.6.1 as builder
 
 RUN DEBIAN_FRONTEND=noninteractive apt update && apt-get install -y git wget libeigen3-dev
 
@@ -6,8 +6,8 @@ ARG MAKEFLAGS
 
 #install new cmake version
 RUN apt remove -y cmake
-RUN wget https://cmake.org/files/v3.15/cmake-3.15.0.tar.gz && tar -zxvf cmake-3.15.0.tar.gz
-RUN cd cmake-3.15.0 && ./bootstrap && make install
+RUN pip3 install --no-cache-dir --verbose --upgrade pip
+RUN pip3 install --no-cache-dir --verbose --upgrade cmake
 
 RUN cmake --version
 
@@ -17,33 +17,26 @@ RUN git clone --branch yaml-cpp-0.6.0 https://github.com/jbeder/yaml-cpp yaml-cp
     cd yaml-cpp-0.6 && \
     mkdir build && \
     cd build && \
-    cmake -DBUILD_SHARED_LIBS=ON -D CMAKE_INSTALL_PREFIX=/usr/local/libyaml-cpp .. && \
+    cmake -DBUILD_SHARED_LIBS=ON .. && \
     make $MAKEFLAGS && \
-    make install && \
-    cp libyaml-cpp.so.0.6.0 /usr/lib/aarch64-linux-gnu/ && \
-    ln -s /usr/lib/aarch64-linux-gnu/libyaml-cpp.so.0.6.0 /usr/lib/aarch64-linux-gnu/libyaml-cpp.so.0.6
+    make install
 
 WORKDIR /
-RUN ls
-RUN git clone https://github.com/ceccocats/tkDNN.git
 
-# changes in CMakeLists.txt neccesary 
-RUN rm -rf tkDNN
-RUN git clone https://github.com/ceccocats/tkDNN.git tkDNN
-COPY CMakeLists.txt /tkDNN/CMakeLists.txt
+RUN git clone -b tensorrt8 https://github.com/ceccocats/tkDNN.git
 
-# adapt scripts to work with python
-COPY ./tkdnn_python/DetectionNN.h /tkDNN/include/tkDNN/DetectionNN.h
-COPY ./tkdnn_python/utils.h /tkDNN/include/tkDNN/utils.h
-COPY ./tkdnn_python/utils.cpp /tkDNN/src/utils.cpp
-COPY ./tkdnn_python/darknetRT.cpp /tkDNN/demo/demo/darknetRT.cpp
-COPY ./tkdnn_python/darknetRT.h /tkDNN/demo/demo/darknetRT.h
+WORKDIR /tkDNN
 
-RUN mkdir /tkDNN/build
-COPY yolo4tiny.cpp /tkDNN/tests/darknet/yolo4tiny.cpp
-RUN cd tkDNN && cd build && cmake .. -D CMAKE_INSTALL_PREFIX=/usr/local/tkDNN && make $MAKEFLAGS && make install
+# applying patch to provide python support (adapted from https://github.com/ceccocats/tkDNN/pull/117)
+COPY python_support.patch ./
+RUN git apply python_support.patch
 
-FROM zauberzeug/l4t-opencv:4.5.2-on-nano-r32.5.0
+WORKDIR /tkDNN/build
+RUN cmake .. -D CMAKE_INSTALL_PREFIX=/usr/local/tkDNN
+RUN make $MAKEFLAGS
+RUN make install
+
+FROM zauberzeug/l4t-opencv:4.5.2-on-nano-32.6.1
 
 COPY --from=builder /usr/local/tkDNN /usr/local
 COPY --from=builder /tkDNN/build/libdarknetRT.so /usr/local/lib/libdarknetRT.so
